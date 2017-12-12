@@ -17,7 +17,8 @@ export default function size() {
     locale = helper.d3_defaultLocale,
     specifier = helper.d3_defaultFormatSpecifier,
     labelOffset = 10,
-    labelAlign = "middle",
+    labelAlign = "default",
+    labelPosition = "default",
     labelDelimiter = helper.d3_defaultDelimiter,
     labelWrap,
     orient = "vertical",
@@ -103,6 +104,7 @@ export default function size() {
     //sets placement
 
     const textSize = text.nodes().map(d => d.getBBox()),
+      lineHeight = helper.d3_calcLineHeights(text.nodes()),
       shapeSize = shapes.nodes().map((d, i) => {
         const bbox = d.getBBox()
         const stroke = scale(type.data[i])
@@ -120,23 +122,52 @@ export default function size() {
 
     let cellTrans,
       textTrans,
-      textAlign = labelAlign == "start" ? 0 : labelAlign == "middle" ? 0.5 : 1
+      shapeTrans,
+      realPosition = labelPosition == "default" ? (orient == "vertical" ? "right" : "bottom") : labelPosition,
+      realAlign = labelAlign == "default" ? (orient == "vertical" ? "start" : "middle") : labelAlign,
+      textAlign = realAlign == "start" ? 0 : realAlign == "middle" ? 0.5 : 1
 
     //positions cells and text
     if (orient === "vertical") {
-      const cellSize = textSize.map((d, i) =>
-        Math.max(d.height, shapeSize[i].height)
-      )
-      const y =
-        shape == "circle" || shape == "line" ? shapeSize[0].height / 2 : 0
+      const cellSize = textSize.map((d, i) => {
+        if (realPosition == "left" || realPosition == "right")
+          return Math.max(d.height, shapeSize[i].height);
+        else
+          return d.height + shapeSize[i].height + labelOffset;
+      })
+      const maxTextW = max(textSize, d => d.width)
+
+      const y = ((realPosition == "left" || realPosition == "right") && 
+        (shape == "circle" || shape == "line")) ? shapeSize[0].height / 2 : 0
+      const shift = shape == "circle" ? maxW / 2 : 0
       cellTrans = (d, i) => {
         const height = sum(cellSize.slice(0, i))
-
         return `translate(0, ${y + height + i * shapePadding})`
       }
 
-      textTrans = (d, i) => `translate( ${maxW + labelOffset},
-          ${shapeSize[i].y + shapeSize[i].height / 2 + 5})`
+      shapeTrans = (d, i) => {
+        const yShift = (shape == "circle" || shape == "line") ? shapeSize[i].height / 2 : 0
+        const left = (realPosition == "left") ? (maxTextW + shift + labelOffset) : (realPosition == "top" || realPosition == "bottom") ? shift * 2 : 0
+        const top = (realPosition == "top") ? (textSize[i].height + labelOffset + yShift) : 0
+        return `translate(${left}, ${top})`
+      }
+
+      textTrans = (d,i) => {
+        console.log(i)
+        let left = maxW * textAlign,
+          top = shapeSize[i].y + shapeSize[i].height / 2 + 5
+
+        if (realPosition == "left") {
+          left = maxTextW * textAlign
+        } else if (realPosition == "right") {
+          left = maxW + labelOffset + maxTextW * textAlign
+        } else if (realPosition == "top") {
+          top = lineHeight[i]
+        } else {
+          top = shapeSize[i].y + shapeSize[i].height + labelOffset + 8
+        }
+        return `translate(${left}, ${top})`
+      }
     } else if (orient === "horizontal") {
       cellTrans = (d, i) => {
         const width = sum(shapeSize.slice(0, i), d => d.width)
@@ -151,7 +182,7 @@ export default function size() {
       }
     }
 
-    helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign)
+    helper.d3_placement(cell, cellTrans, text, textTrans, shapes, shapeTrans, realAlign)
     helper.d3_title(svg, title, classPrefix, titleWidth)
 
     cell.transition().style("opacity", 1)
@@ -205,12 +236,20 @@ export default function size() {
   }
 
   legend.labelAlign = function(_) {
-    if (!arguments.length) return labelAlign
-    if (_ == "start" || _ == "end" || _ == "middle") {
-      labelAlign = _
+    if (!arguments.length) return labelAlign;
+    if (_ == "default" || _ == "start" || _ == "end" || _ == "middle") {
+      labelAlign = _;
     }
-    return legend
-  }
+    return legend;
+  };
+
+  legend.labelPosition = function(_) {
+    if (!arguments.length) return labelPosition;
+    if (_ == "default" || _ == "left" || _ == "right" || _ == "top" || _ == "bottom") {
+      labelPosition = _;
+    }
+    return legend;
+  };
 
   legend.locale = function(_) {
     if (!arguments.length) return locale
@@ -245,7 +284,7 @@ export default function size() {
   legend.orient = function(_) {
     if (!arguments.length) return orient
     _ = _.toLowerCase()
-    if (_ == "horizontal" || _ == "vertical") {
+    if (_ == "horizontal" || _ == "vertical" || _ == "horizontal-inline") {
       orient = _
     }
     return legend

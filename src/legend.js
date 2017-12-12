@@ -171,6 +171,13 @@ export default {
     return type;
   },
 
+  d3_calcLineHeights: function (texts) {
+    return texts.map((t) => {
+      const spans = select(t).selectAll("tspan")
+      return (spans.nodes().length && t.getBBox().height / spans.nodes().length) || t.getBBox().height;
+    })
+  },
+
   d3_filterCells: (type, cellFilter) => {
     let filterCells = type.data.map((d, i) => ({ data: d, label: type.labels[i] }))
       .filter(cellFilter)
@@ -181,12 +188,11 @@ export default {
     return type
   },
 
-  d3_placement: (orient, cell, cellTrans, text, textTrans, labelAlign) => {
+  d3_placement: (cell, cellTrans, text, textTrans, shapes, shapeTrans, labelAlign) => {
     cell.attr("transform", cellTrans);
+    shapes.attr("transform", shapeTrans)
     text.attr("transform", textTrans);
-    if (orient === "horizontal"){
-      text.style("text-anchor", labelAlign);
-    }
+    text.style("text-anchor", labelAlign); 
   },
 
   d3_addEvents: function(cells, dispatcher){

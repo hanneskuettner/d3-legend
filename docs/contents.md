@@ -4,6 +4,7 @@
     - [Quantile Scale Legend](#color-quant)
     - [Threshold Scale Legend](#color-threshold)
     - [Linear Scale Legend - Horizontal](#color-linear)
+    - [Linear Scale Legend - Inline Horizontal](#color-linear-inline)
     - [Linear Scale Legend - 10 cells](#color-linear-10)
     - [Linear Scale Legend - Custom cells](#color-linear-custom)
     - [Ordinal Scale Legend - Custom shape](#color-ordinal)

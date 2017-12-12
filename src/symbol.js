@@ -115,9 +115,18 @@ export default function symbol() {
       textTrans = (d, i) => `translate( ${shapeSize[i].width * textAlign +
         shapeSize[i].x},
               ${maxH + labelOffset})`
+    }  else if (orient === "horizontal-inline"){
+      let prevCellSizes = (i) => cell.filter((d, ci) => ci < i ).nodes().reduce((acc, n, ci) => {
+          const shapeWidth = maxW + shapePadding
+          const textWidth = text.nodes()[ci].getBBox().width + labelOffset
+          return acc + shapeWidth + textWidth;
+      }, 0)
+      cellTrans = (d,i) => `translate(${prevCellSizes(i)},0)`
+      textTrans = (d,i) => `translate(${(shapeSize[i].width + shapeSize[i].x + labelOffset)}, 
+        ${(shapeSize[i].y + shapeSize[i].height/2 + 5)})`
     }
 
-    helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign)
+    // helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign)
     helper.d3_title(svg, title, classPrefix, titleWidth)
     cell.transition().style("opacity", 1)
   }
@@ -195,7 +204,7 @@ export default function symbol() {
   legend.orient = function(_) {
     if (!arguments.length) return orient
     _ = _.toLowerCase()
-    if (_ == "horizontal" || _ == "vertical") {
+    if (_ == "horizontal" || _ == "vertical" || _ == "horizontal-inline") {
       orient = _
     }
     return legend

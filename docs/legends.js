@@ -19,6 +19,14 @@ var legend = d3
   .legendColor()
   .labelFormat(d3.format(".2f"))
   .useClass(true)
+  .shapePadding(0)
+  .shapeHeight(50)
+  .shapeWidth(100)
+  .labelOffset(20)
+  .labelPosition('top')
+  .labelAlign('middle')
+  .labelWrap(100)
+  .labels(['a really really really really long label', 'a really really really really long label'])
   .title("A really really really really really long title")
   .titleWidth(100)
   .scale(quantize)
@@ -89,12 +97,15 @@ svg
 var legendLinear = d3
   .legendColor()
   .shapeWidth(30)
+  .labelPosition("top")
+  .labels(["long long long label"])
+  .labelWrap(30)
   .orient("horizontal")
   .scale(linear)
 
-//Color Linear #svg-color-linear-10
 svg.select(".legendLinear").call(legendLinear)
 
+//Color Linear #svg-color-linear-10
 svg = d3.select("#svg-color-linear-10")
 
 svg
@@ -190,9 +201,12 @@ var legendSize = d3
   .legendSize()
   .scale(linearSize)
   .shape("circle")
-  .shapePadding(15)
-  .labelOffset(20)
-  .orient("horizontal")
+  .shapePadding(0)
+  .labelOffset(0)
+  .labels(["a very very very very long label", "a very very very very long label"])
+  .labelWrap(100)
+  .labelPosition("top")
+  // .orient("horizontal")
   .on("cellover", function() {
     console.log("cellover", d3.event, d3.event.type)
   })
@@ -216,7 +230,9 @@ var legendSizeLine = d3
   .legendSize()
   .scale(lineSize)
   .shape("line")
-  .orient("horizontal")
+  .labelPosition("top")
+  .labelAlign("end")
+  // .orient("horizontal")
   .labels([
     "tiny testing at the beginning",
     "small",
@@ -226,7 +242,7 @@ var legendSizeLine = d3
   ])
   .labelWrap(30)
   .shapeWidth(50)
-  .labelAlign("start")
+  // .labelAlign("start")
   .shapePadding(10)
 
 svg.select(".legendSizeLine").call(legendSizeLine)

@@ -3,7 +3,7 @@ import { dispatch } from 'd3-dispatch';
 import { scaleLinear } from 'd3-scale';
 import { formatLocale, formatSpecifier } from 'd3-format';
 
-import { sum } from 'd3-array';
+import { sum, max } from 'd3-array';
 
 export default function color(){
 
@@ -22,7 +22,8 @@ export default function color(){
     locale = helper.d3_defaultLocale,
     specifier = helper.d3_defaultFormatSpecifier,
     labelOffset = 10,
-    labelAlign = "middle",
+    labelAlign = "default",
+    labelPosition = "default",
     labelDelimiter = helper.d3_defaultDelimiter,
     labelWrap,
     orient = "vertical",
@@ -66,9 +67,11 @@ export default function color(){
       cell = cellEnter.merge(cell);
 
       // sets placement
-      const text = cell.selectAll("text"),
+      const text = cell.select("text"),
         textSize = text.nodes().map(d => d.getBBox()),
+        lineHeight = helper.d3_calcLineHeights(text.nodes()),
         shapeSize = shapes.nodes().map( d => d.getBBox());
+
       //sets scale
       //everything is fill except for line which is stroke,
       if (!useClass){
@@ -83,26 +86,87 @@ export default function color(){
 
       let cellTrans,
       textTrans,
-      textAlign = (labelAlign == "start") ? 0 : (labelAlign == "middle") ? 0.5 : 1;
+      shapeTrans,
+      realPosition = labelPosition == "default" ? (orient == "vertical" ? "right" : "bottom") : labelPosition,
+      realAlign = labelAlign == "default" ? (orient == "vertical" ? "start" : "middle") : labelAlign,
+      textAlign = (realAlign == "start") ? 0 : (realAlign == "middle") ? 0.5 : 1;
 
-      //positions cells and text
+      //positions cells, text and shapes
       if (orient === "vertical"){
-        const cellSize = textSize.map((d, i) => Math.max(d.height, shapeSize[i].height))
+        const cellSize = textSize.map((d, i) => {
+          if (realPosition == "left" || realPosition == "right")
+            return Math.max(d.height, shapeSize[i].height);
+          else
+            return d.height + shapeSize[i].height + labelOffset;
+        })
+        const maxTextW = max(textSize, d => d.width)
 
-        cellTrans = (d, i) => {
-          const height = sum(cellSize.slice(0, i));
-          return `translate(0, ${height + i*shapePadding})`}
+        cellTrans = (d,i) => {
+          const height = sum(cellSize.slice(0, i))
+          return `translate(0, ${height + i * shapePadding})`
+        }
 
-        textTrans = (d,i) => `translate( ${(shapeSize[i].width + shapeSize[i].x +
-          labelOffset)}, ${(shapeSize[i].y + shapeSize[i].height/2 + 5)})`;
+        shapeTrans = (d,i) => {
+          const left = realPosition == "left" && (maxTextW + labelOffset) || 0
+          const top = realPosition == "top" && (textSize[i].height + labelOffset + 10) || 0
+          return `translate(${left}, ${top})`
+        }
 
+        textTrans = (d,i) => {
+          let left = maxTextW * textAlign,
+            top = shapeSize[i].y + shapeSize[i].height / 2 + 5
+
+          if (realPosition == "left") {
+            left = maxTextW * textAlign
+          } else if (realPosition == "right") {
+            left = shapeSize[i].width + shapeSize[i].x + labelOffset + maxTextW * textAlign
+          } else if (realPosition == "top") {
+            top = lineHeight[i] + 8;
+          } else {
+            top = shapeSize[i].y + shapeSize[i].height + labelOffset + 10
+          }
+          return `translate(${left}, ${top})`
+        }
       } else if (orient === "horizontal"){
-        cellTrans = (d,i) => `translate(${(i * (shapeSize[i].width + shapePadding))},0)`
-        textTrans = (d,i) => `translate(${(shapeSize[i].width*textAlign  + shapeSize[i].x)},
-          ${(shapeSize[i].height + shapeSize[i].y + labelOffset + 8)})`;
+        const cellSize = textSize.map((d, i) => {
+          if (realPosition == "top" || realPosition == "bottom") {
+            return shapeSize[i].width
+          } else {
+            return d.width + shapeSize[i].width + labelOffset
+          }
+        })
+        const maxH = max(textSize, d => d.height)
+
+        cellTrans = (d,i) => {
+          const width = sum(cellSize.slice(0, i))
+          return `translate(${(width + i*shapePadding)},0)`
+        }
+
+        shapeTrans = (d,i) => {
+          const left = realPosition == "left" && (textSize[i].width + labelOffset) || 0
+          const top = realPosition == "top" && (maxH + labelOffset) || 0
+          return `translate(${left}, ${top})`
+        }
+
+        textTrans = (d,i) => {
+          let left = shapeSize[i].width * textAlign + shapeSize[i].x, // used for top | bottom
+            top = shapeSize[i].y + shapeSize[i].height / 2 + 5  // used for left | right
+
+          if (realPosition == "left") {
+            left = textSize[i].width * textAlign
+          } else if (realPosition == "right") {
+            left = shapeSize[i].width + shapeSize[i].x + textSize[i].width * textAlign + labelOffset
+          } else if (realPosition == "top") {
+            top = lineHeight[i] + (maxH - textSize[i].height)
+          } else {
+            top = shapeSize[i].height + shapeSize[i].y + labelOffset + 5
+          }
+
+          return `translate(${left}, ${top})`
+        }
       }
 
-      helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign);
+      helper.d3_placement(cell, cellTrans, text, textTrans, shapes, shapeTrans, realAlign);
       helper.d3_title(svg, title, classPrefix, titleWidth);
 
       cell.transition().style("opacity", 1);
@@ -170,8 +234,16 @@ export default function color(){
 
   legend.labelAlign = function(_) {
     if (!arguments.length) return labelAlign;
-    if (_ == "start" || _ == "end" || _ == "middle") {
+    if (_ == "default" || _ == "start" || _ == "end" || _ == "middle") {
       labelAlign = _;
+    }
+    return legend;
+  };
+
+  legend.labelPosition = function(_) {
+    if (!arguments.length) return labelPosition;
+    if (_ == "default" || _ == "left" || _ == "right" || _ == "top" || _ == "bottom") {
+      labelPosition = _;
     }
     return legend;
   };
@@ -217,7 +289,7 @@ export default function color(){
   legend.orient = function(_){
     if (!arguments.length) return orient;
     _ = _.toLowerCase();
-    if (_ == "horizontal" || _ == "vertical") {
+    if (_ == "horizontal" || _ == "vertical" || _ == "horizontal-inline") {
       orient = _;
     }
     return legend;

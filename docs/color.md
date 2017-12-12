@@ -16,7 +16,7 @@ This function is run as a filter function against the array of cells. If you hav
 
 legendColor.**orient(string)**
 
-Accepts "vertical" or "horizontal" for legend orientation. Default set to "vertical."
+Accepts "vertical", "horizontal" or "horizontal-inline" for legend orientation. Default set to "vertical."
 
 legendColor.**ascending(boolean)**
 
