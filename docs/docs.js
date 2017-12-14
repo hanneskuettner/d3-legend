@@ -211,12 +211,13 @@ var legendSize = d3
   .legendSize()
   .scale(linearSize)
   .shape("circle")
-  .shapePadding(0)
-  .labelOffset(0)
-  .labels(["a very very very very long label", "a very very very very long label"])
+  .shapePadding(15)
+  .labelOffset(20)
+  // .labels(["a very very very very long label", "a very very very very long label"])
   .labelWrap(100)
-  .labelPosition("top")
-  // .orient("horizontal")
+  .labelAlign('middle')
+  .labelPosition("right")
+  .orient("horizontal")
   .on("cellover", function() {
     console.log("cellover", d3.event, d3.event.type)
   })
@@ -227,7 +228,7 @@ svg.select(".legendSize").call(legendSize)
 var lineSize = d3
   .scaleLinear()
   .domain([0, 10])
-  .range([2, 10])
+  .range([5, 20])
 
 svg = d3.select("#svg-size-line")
 
@@ -240,9 +241,10 @@ var legendSizeLine = d3
   .legendSize()
   .scale(lineSize)
   .shape("line")
-  .labelPosition("top")
-  .labelAlign("end")
-  // .orient("horizontal")
+  .labelPosition("right")
+  .labelAlign("start")
+  .labelOffset(0)
+  .orient("horizontal")
   .labels([
     "tiny testing at the beginning",
     "small",
@@ -285,6 +287,10 @@ var legendPath = d3
   .scale(symbolScale)
   //.orient("horizontal")
   .labelWrap(30)
+  .labelPosition("top")
+  .labelAlign('start')
+  .shapePadding(0)
+  .labelOffset(0)
   .title("Symbol Legend Title")
   .on("cellclick", function(d) {
     alert("clicked " + d)

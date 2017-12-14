@@ -18,7 +18,8 @@ export default function symbol() {
     title = "",
     locale = helper.d3_defaultLocale,
     specifier = helper.d3_defaultFormatSpecifier,
-    labelAlign = "middle",
+    labelAlign = "default",
+    labelPosition = "default",
     labelOffset = 10,
     labelDelimiter = helper.d3_defaultDelimiter,
     labelWrap,
@@ -91,6 +92,7 @@ export default function symbol() {
     // sets placement
     const text = cell.selectAll("text"),
       textSize = text.nodes().map(d => d.getBBox()),
+      lineHeight = helper.d3_calcLineHeights(text.nodes()),
       shapeSize = shapes.nodes().map(d => d.getBBox())
 
     const maxH = max(shapeSize, d => d.height),
@@ -98,18 +100,47 @@ export default function symbol() {
 
     let cellTrans,
       textTrans,
-      textAlign = labelAlign == "start" ? 0 : labelAlign == "middle" ? 0.5 : 1
+      shapeTrans,
+      realPosition = labelPosition == "default" ? (orient == "vertical" ? "right" : "bottom") : labelPosition,
+      realAlign = labelAlign == "default" ? (orient == "vertical" ? "start" : "middle") : labelAlign,
+      textAlign = realAlign == "start" ? 0 : realAlign == "middle" ? 0.5 : 1
 
     //positions cells and text
     if (orient === "vertical") {
-      const cellSize = textSize.map((d, i) => Math.max(maxH, d.height))
+      const cellSize = textSize.map((d, i) => {
+        if (realPosition == "left" || realPosition == "right")
+          return Math.max(maxH, d.height);
+        else
+          return d.height + shapeSize[i].height + labelOffset;
+      })
+      const maxTextW = max(textSize, d => d.width)
 
       cellTrans = (d, i) => {
         const height = sum(cellSize.slice(0, i))
         return `translate(0, ${height + i * shapePadding} )`
       }
-      textTrans = (d, i) => `translate( ${maxW + labelOffset},
-              ${shapeSize[i].y + shapeSize[i].height / 2 + 5})`
+
+      shapeTrans = (d,i) => {
+        const left = realPosition == "left" ? (maxTextW + maxW / 2 + labelOffset) : (realPosition == "top" || realPosition == "bottom") ? maxW / 2 : 0
+        const top = realPosition == "top" && (textSize[i].height + labelOffset + shapeSize[i].height / 2) || 0
+        return `translate(${left}, ${top})`
+      }
+
+      textTrans = (d,i) => {
+        let left = maxTextW * textAlign,
+          top = shapeSize[i].y + shapeSize[i].height / 2 + 5
+
+        if (realPosition == "left") {
+          left = maxTextW * textAlign
+        } else if (realPosition == "right") {
+          left = maxW + labelOffset + maxTextW * textAlign
+        } else if (realPosition == "top") {
+          top = lineHeight[i] / 2;
+        } else {
+          top = shapeSize[i].y + shapeSize[i].height + labelOffset + 10
+        }
+        return `translate(${left}, ${top})`
+      }
     } else if (orient === "horizontal") {
       cellTrans = (d, i) => `translate( ${i * (maxW + shapePadding)},0)`
       textTrans = (d, i) => `translate( ${shapeSize[i].width * textAlign +
@@ -126,7 +157,7 @@ export default function symbol() {
         ${(shapeSize[i].y + shapeSize[i].height/2 + 5)})`
     }
 
-    // helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign)
+    helper.d3_placement(cell, cellTrans, text, textTrans, shapes, shapeTrans, realAlign)
     helper.d3_title(svg, title, classPrefix, titleWidth)
     cell.transition().style("opacity", 1)
   }
@@ -164,11 +195,19 @@ export default function symbol() {
   }
 
   legend.labelAlign = function(_) {
-    if (!arguments.length) return labelAlign
-    if (_ == "start" || _ == "end" || _ == "middle") {
-      labelAlign = _
+    if (!arguments.length) return labelAlign;
+    if (_ == "default" || _ == "start" || _ == "end" || _ == "middle") {
+      labelAlign = _;
     }
-    return legend
+    return legend;
+  }
+
+  legend.labelPosition = function(_) {
+    if (!arguments.length) return labelPosition;
+    if (_ == "default" || _ == "left" || _ == "right" || _ == "top" || _ == "bottom") {
+      labelPosition = _;
+    }
+    return legend;
   }
 
   legend.locale = function(_) {

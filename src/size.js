@@ -109,9 +109,8 @@ export default function size() {
         const bbox = d.getBBox()
         const stroke = scale(type.data[i])
 
-        if (shape === "line" && orient === "horizontal") {
+        if (shape === "line") {
           bbox.height = bbox.height + stroke
-        } else if (shape === "line" && orient === "vertical") {
           bbox.width = bbox.width
         }
         return bbox
@@ -127,7 +126,7 @@ export default function size() {
       realAlign = labelAlign == "default" ? (orient == "vertical" ? "start" : "middle") : labelAlign,
       textAlign = realAlign == "start" ? 0 : realAlign == "middle" ? 0.5 : 1
 
-    //positions cells and text
+    //positions cells, text and shapes
     if (orient === "vertical") {
       const cellSize = textSize.map((d, i) => {
         if (realPosition == "left" || realPosition == "right")
@@ -139,22 +138,22 @@ export default function size() {
 
       const y = ((realPosition == "left" || realPosition == "right") && 
         (shape == "circle" || shape == "line")) ? shapeSize[0].height / 2 : 0
-      const shift = shape == "circle" ? maxW / 2 : 0
       cellTrans = (d, i) => {
         const height = sum(cellSize.slice(0, i))
         return `translate(0, ${y + height + i * shapePadding})`
       }
 
+      const xShift = shape == "circle" ? maxW : 0
       shapeTrans = (d, i) => {
         const yShift = (shape == "circle" || shape == "line") ? shapeSize[i].height / 2 : 0
-        const left = (realPosition == "left") ? (maxTextW + shift + labelOffset) : (realPosition == "top" || realPosition == "bottom") ? shift * 2 : 0
-        const top = (realPosition == "top") ? (textSize[i].height + labelOffset + yShift) : 0
+        const left = (realPosition == "left") ? (maxTextW + xShift + labelOffset) : 
+          ((realPosition == "top" || realPosition == "bottom") ? xShift : 0)
+        const top = (realPosition == "top") ? (textSize[i].height + labelOffset + yShift + 3) : 0
         return `translate(${left}, ${top})`
       }
 
       textTrans = (d,i) => {
-        console.log(i)
-        let left = maxW * textAlign,
+        let left = Math.max(maxW, maxTextW) * textAlign,
           top = shapeSize[i].y + shapeSize[i].height / 2 + 5
 
         if (realPosition == "left") {
@@ -162,23 +161,53 @@ export default function size() {
         } else if (realPosition == "right") {
           left = maxW + labelOffset + maxTextW * textAlign
         } else if (realPosition == "top") {
-          top = lineHeight[i]
+          top = lineHeight[i];
         } else {
           top = shapeSize[i].y + shapeSize[i].height + labelOffset + 8
         }
         return `translate(${left}, ${top})`
       }
     } else if (orient === "horizontal") {
-      cellTrans = (d, i) => {
-        const width = sum(shapeSize.slice(0, i), d => d.width)
-        const y = shape == "circle" || shape == "line" ? maxH / 2 : 0
-        return `translate(${width + i * shapePadding}, ${y})`
+      const cellSize = textSize.map((d, i) => {
+        if (realPosition == "top" || realPosition == "bottom") {
+          return shapeSize[i].width
+        } else {
+          return d.width + shapeSize[i].width + labelOffset
+        }
+      })
+      const maxTextH = max(textSize, d => d.height)
+
+      cellTrans = (d,i) => {
+        const width = sum(cellSize.slice(0, i))
+        const y = (realPosition != "top"  && (shape == "circle" || shape == "line")) ? maxH / 2 : 0
+        return `translate(${(width + i*shapePadding)}, ${y})`
+      }
+
+      shapeTrans = (d,i) => {
+        const xShift = (shape == "circle") ? shapeSize[i].width / 2 : 0
+        const yShift = (shape == "circle") ? maxH / 2 : 0
+        const left = realPosition == "left" ? (textSize[i].width + xShift + labelOffset) : 0
+        const top = realPosition == "top" ? (maxTextH + yShift + labelOffset) : 0
+        return `translate(${left}, ${top})`
       }
 
       const offset = shape == "line" ? maxH / 2 : maxH
-      textTrans = (d, i) => {
-        return `translate( ${shapeSize[i].width * textAlign + shapeSize[i].x},
-              ${offset + labelOffset})`
+      textTrans = (d,i) => {
+        let left = shapeSize[i].width * textAlign + shapeSize[i].x, // used for top | bottom
+          top = (shape == "circle") ? shapeSize[i].y + shapeSize[i].height / 2 + 5 : 
+            (shape == "line") ? 5 : lineHeight[i] / 2 // used for left | right
+
+        if (realPosition == "left") {
+          left = textSize[i].width * textAlign
+        } else if (realPosition == "right") {
+          left = shapeSize[i].width + shapeSize[i].x + textSize[i].width * textAlign + labelOffset
+        } else if (realPosition == "top") {
+          top = lineHeight[i] + (maxTextH - textSize[i].height)
+        } else {
+          top = offset + labelOffset
+        }
+
+        return `translate(${left}, ${top})`
       }
     }
 
@@ -241,7 +270,7 @@ export default function size() {
       labelAlign = _;
     }
     return legend;
-  };
+  }
 
   legend.labelPosition = function(_) {
     if (!arguments.length) return labelPosition;
@@ -249,7 +278,7 @@ export default function size() {
       labelPosition = _;
     }
     return legend;
-  };
+  }
 
   legend.locale = function(_) {
     if (!arguments.length) return locale
